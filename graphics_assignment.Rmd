@@ -1,0 +1,236 @@
+---
+title: "Getting and Cleaning Data assignment"
+author: "Oleksii Yehorchenkov"
+date: "30 11 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+This assignment is based on materials from Coursera course [Exploratory Data Analysis](https://www.coursera.org/learn/exploratory-data-analysis/home/welcome)
+
+## Introduction
+
+Fine particulate matter (PM2.5) is an ambient air pollutant for which there is strong evidence that it is harmful to human health. In the United States, the Environmental Protection Agency (EPA) is tasked with setting national ambient air quality standards for fine PM and for tracking the emissions of this pollutant into the atmosphere. Approximatly every 3 years, the EPA releases its database on emissions of PM2.5. This database is known as the National Emissions Inventory (NEI). You can read more information about the NEI at the EPA National Emissions Inventory web site.
+
+For each year and for each type of PM source, the NEI records how many tons of PM2.5 were emitted from that source over the course of the entire year. The data that you will use for this assignment are for 1999, 2002, 2005, and 2008.
+
+## Data
+
+The data for this assignment could be downloaded by the [link](https://www.dropbox.com/s/fey54ngk8g4z6rr/exdata_data_NEI_data.zip?dl=0):
+
+The zip file contains two files:
+
+**PM2.5 Emissions Data** (`summarySCC_PM25.rds`): This file contains a data frame with all of the PM2.5 emissions data for 1999, 2002, 2005, and 2008. For each year, the table contains number of tons of PM2.5 emitted from a specific type of source for the entire year.
+
+- **fips**: A five-digit number (represented as a string) indicating the U.S. county
+- **SCC**: The name of the source as indicated by a digit string (see source code classification table)
+- **Pollutant**: A string indicating the pollutant
+- **Emissions**: Amount of PM2.5 emitted, in tons
+- **type**: The type of source (point, non-point, on-road, or non-road)
+- **year**: The year of emissions recorded
+
+**Source Classification Code Table** (`Source_Classification_Code.rds`): This table provides a mapping from the SCC digit strings in the Emissions table to the actual name of the PM2.5 source. The sources are categorized in a few different ways from more general to more specific and you may choose to explore whatever categories you think are most useful. For example, source “10100101” is known as “Ext Comb /Electric Gen /Anthracite Coal /Pulverized Coal”.
+
+You can read each of the two files using the `readRDS()` function in R. For example, reading in each file can be done with the following code:
+
+```
+NEI <- readRDS("summarySCC_PM25.rds")
+SCC <- readRDS("Source_Classification_Code.rds")
+```
+## Questions
+
+You must address the following questions and tasks in your exploratory analysis. For each question/task you will need to make a single **bar** plot. You can use any plotting system in R to make your plot.
+
+1. Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? Make a plot showing the **total** PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008.
+2. Have total emissions from PM2.5 decreased in the **Baltimore City**, Maryland (`fips == "24510"`) from 1999 to 2008?
+3. Of the four types of sources indicated by the `type` (point, nonpoint, onroad, nonroad) variable, which of these four sources have seen decreases in emissions from 1999–2008 for **Baltimore City**? Which have seen increases in emissions from 1999–2008?
+4. Across the United States, how have emissions from coal combustion-related sources changed from 1999–2008?
+5. How have emissions from motor vehicle sources changed from 1999–2008 in **Baltimore City** (EI.Sector starts from "Mobile")?
+6. Compare emissions from motor vehicle sources in Baltimore City with emissions from motor vehicle sources in **Los Angeles County**, California (`fips == "06037"`). Which city has seen greater changes over time in motor vehicle emissions?
+
+
+
+##Answer
+
+```{r}
+library(dplyr)
+NEI <- readRDS("summarySCC_PM25.rds")
+SCC <- readRDS("Source_Classification_Code.rds")
+
+head(NEI)
+head(SCC)
+
+
+```
+
+#Q1
+Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? Make a plot showing the **total** PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008.
+```{r}
+library(ggplot2)
+
+library(devtools)
+
+TotalEMSPerYear <- NEI %>%  group_by(year)
+TotalEMSPerYear <- TotalEMSPerYear %>%  summarize(TEMS = sum(Emissions, na.rm = TRUE))
+
+
+
+TotalEMSPerYear
+#tab <- table(TotalEMSPerYear$Total.Emissions,TotalEMSPerYear$year)
+
+
+
+#barplot(tab, main="BarChart",
+  #xlab="Year",ylab = "Total Emision", col=c("darkblue","red"),
+ # legend = rownames(tab), beside=TRUE)
+
+ggplot(data=TotalEMSPerYear, aes(x=TotalEMSPerYear$year, y=TotalEMSPerYear$TEMS)) +
+  geom_bar(stat="identity")
+
+at2008 <- TotalEMSPerYear[TotalEMSPerYear$year ==2008,2]
+
+at1999 <- TotalEMSPerYear[TotalEMSPerYear$year ==1999,2]
+
+decreaseUS2008_1999 <- at2008 - at1999
+decreaseUS2008_1999
+
+
+
+
+
+```
+
+#Q2
+Have total emissions from PM2.5 decreased in the **Baltimore City**, Maryland (`fips == "24510"`) from 1999 to 2008?
+```{r}
+TotalEMSBaltimore <- NEI %>%
+        subset(fips == "24510") %>%
+        group_by(year) %>%
+        summarize(TEB = sum(Emissions, na.rm = TRUE))
+
+At2008 <- TotalEMSBaltimore[TotalEMSBaltimore$year == 2008, 2]
+At1999 <- TotalEMSBaltimore[TotalEMSBaltimore$year == 1999, 2]
+
+delta.emissions.baltimore <- At2008 - At1999
+delta.emissions.baltimore
+
+ggplot(data=TotalEMSBaltimore, aes(x=TotalEMSBaltimore$year, y=TotalEMSBaltimore$TEB, fill=TotalEMSBaltimore$TEB)) +
+    geom_bar(stat="identity")
+
+
+
+
+
+```
+
+#Q3
+Of the four types of sources indicated by the `type` (point, nonpoint, onroad, nonroad) variable, which of these four sources have seen decreases in emissions from 1999–2008 for **Baltimore City**? Which have seen increases in emissions from 1999–2008?
+```{r}
+TotalEMSTYPE <- NEI %>% 
+    subset(fips == "24510") %>%
+    group_by(year, type) %>%
+    summarize(TET = sum(Emissions, na.rm = TRUE))
+
+
+ggplot(data=TotalEMSTYPE, aes(x=TotalEMSTYPE$year, y=TotalEMSTYPE$TET, fill=TotalEMSTYPE$TET)) +
+    geom_bar(stat="identity") +   facet_grid(. ~ type)
+
+
+
+```
+
+#Q4
+Across the United States, how have emissions from coal combustion-related sources changed from 1999–2008?
+```{r}
+Coal <- SCC[grep("[Cc]oal",SCC$EI.Sector),]
+SubCoal <- subset(NEI, 
+                       NEI$SCC %in% Coal$SCC)
+
+
+NCoal <- merge(x = SubCoal, 
+                       y = SCC, 
+                       by.x = "SCC", 
+                       by.y = "SCC")
+
+NCoalTotal <- NCoal %>% 
+    group_by(year) %>%
+    summarize(Total = sum(Emissions, na.rm = TRUE))
+
+
+ggplot(data=NCoalTotal, aes(x=NCoalTotal$year, y=NCoalTotal$Total, fill=NCoalTotal$Total)) +
+    geom_bar(stat="identity")
+
+
+
+At2008 <- NCoalTotal[NCoalTotal$year == 2008, 2]
+At1999 <- NCoalTotal[NCoalTotal$year == 1999, 2]
+
+Dif <- At2008 - At1999
+Dif
+
+```
+
+#Q5 
+How have emissions from motor vehicle sources changed from 1999–2008 in **Baltimore City** (EI.Sector starts from "Mobile")?
+```{r}
+VSCC <- SCC[grep("[Vv]eh", SCC$Short.Name), ]
+
+EMB <- NEI %>% 
+    subset(fips == "24510" & NEI$SCC %in% VSCC$SCC) %>%
+    merge(y = VSCC, by.x = "SCC", by.y = "SCC") %>%
+    group_by(year) %>%
+    summarize(VET = sum(Emissions, na.rm = TRUE))
+
+
+
+ggplot(data=EMB, aes(x=EMB$year, y=EMB$VET, fill=EMB$VET)) +
+    geom_bar(stat="identity")
+
+
+At2008 <- EMB[EMB$year == 2008, 2]
+At1999 <- EMB[EMB$year == 1999, 2]
+
+
+Dif <- At2008 - At1999
+Dif
+
+
+```
+
+#Q6
+Compare emissions from motor vehicle sources in Baltimore City with emissions from motor vehicle sources in **Los Angeles County**, California (`fips == "06037"`). Which city has seen greater changes over time in motor vehicle emissions?
+```{r}
+
+VSCC <- SCC[grep("[Vv]eh", SCC$Short.Name), ]
+
+
+EML <- NEI %>% 
+    subset(fips == "06037" & NEI$SCC %in% VSCC$SCC) %>%
+    merge(y = VSCC, by.x = "SCC", by.y = "SCC") %>%
+    group_by(year) %>%
+    summarize(VET = sum(Emissions, na.rm = TRUE))
+
+EMB2 <- cbind(EMB, "City" = rep("Baltimore", 4))
+EML2 <- cbind(EML, "City" = rep("LA", 4))
+
+EMC <- rbind(EMB2, EML2)
+
+
+ggplot(data=EMC, aes(x=EMC$year, y=EMC$VET, fill=EMC$VET, col =EMC$City)) +
+    geom_bar(stat="identity")
+
+
+
+EML2008 <- EML[EML$year  == 2008, 2]
+EML1999 <- EML[EML$year  == 1999, 2]
+
+
+
+Dif <- EML2008 - EML1999
+Dif
+
+
+```
